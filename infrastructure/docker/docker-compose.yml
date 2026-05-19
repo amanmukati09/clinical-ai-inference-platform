@@ -1,0 +1,75 @@
+version: "3.9"
+
+services:
+
+  postgres:
+    image: postgres:15
+    container_name: clinicalai-postgres
+    environment:
+      POSTGRES_DB: clinicalai
+      POSTGRES_USER: clinicalai
+      POSTGRES_PASSWORD: clinicalai123
+    ports:
+      - "5432:5433"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clinicalai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ml-service:
+    build:
+      context: ../../ml-service
+      dockerfile: Dockerfile
+    container_name: clinicalai-ml
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../../data/processed:/data/processed
+      - ../../ml-service/models:/app/models
+    environment:
+      ARTIFACT_DIR: /data/processed/artifacts
+      MODEL_PATH: /app/models/best_model.pt
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  backend:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+    container_name: clinicalai-backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/clinicalai
+      SPRING_DATASOURCE_USERNAME: clinicalai
+      SPRING_DATASOURCE_PASSWORD: clinicalai123
+      ML_SERVICE_BASE_URL: http://ml-service:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ml-service:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+    container_name: clinicalai-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
