@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.egg-info/
+dist/
+.pytest_cache/
+
+# Data - never commit raw data
+data/raw/
+data/processed/
+
+# Java
+target/
+*.class
+*.jar
+
+# Environment
+.env
+*.env.local
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Docker
+*.log
+
+# Node
+node_modules/
+.next/
